@@ -3,11 +3,12 @@ package ru.javawebinar.topjava.util;
 import ru.javawebinar.topjava.model.UserMeal;
 import ru.javawebinar.topjava.model.UserMealWithExcess;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.function.Predicate;
 
 public class UserMealsUtil {
     public static void main(String[] args) {
@@ -28,12 +29,59 @@ public class UserMealsUtil {
     }
 
     public static List<UserMealWithExcess> filteredByCycles(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
+        List<UserMeal> copyMeal = new ArrayList<>(meals);
+
+        copyMeal.sort(Comparator.comparing(UserMeal::getDateTime));
+
+        List<UserMealWithExcess> result = new ArrayList<>();
+        List<UserMeal> list = new ArrayList<>();
+        int countCalories = 0;
+        LocalDate currentData = null;
+
+        for(UserMeal userMeal: copyMeal) {
+            LocalDate localDate = userMeal.getDateTime().toLocalDate();
+
+            if(!localDate.equals(currentData)){
+                parseList(startTime, endTime, caloriesPerDay, result, list, countCalories);
+                currentData = userMeal.getDateTime().toLocalDate();
+                countCalories = userMeal.getCalories();
+                list.clear();
+            } else {
+                countCalories += userMeal.getCalories();
+            }
+            list.add(userMeal);
+        }
+
+        parseList(startTime, endTime, caloriesPerDay, result, list, countCalories);
+
         // TODO return filtered list with excess. Implement by cycles
-        return null;
+        return result;
+    }
+
+    private static void parseList(LocalTime startTime, LocalTime endTime, int caloriesPerDay, List<UserMealWithExcess> result, List<UserMeal> list, int countCalories) {
+        for (UserMeal listEntityUserMeal: list){
+            LocalTime localTime = listEntityUserMeal.getDateTime().toLocalTime();
+            if(localTime.isAfter(startTime) && localTime.isBefore(endTime)) {
+                boolean bool = countCalories > caloriesPerDay;
+                result.add(new UserMealWithExcess(
+                        listEntityUserMeal.getDateTime(),
+                        listEntityUserMeal.getDescription(),
+                        listEntityUserMeal.getCalories(),
+                        bool));
+
+            }
+        }
     }
 
     public static List<UserMealWithExcess> filteredByStreams(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
         // TODO Implement by streams
+        /*meals.stream().filter(new Predicate<UserMeal>() {
+            @Override
+            public boolean test(UserMeal userMeal) {
+                LocalTime localTime = userMeal.getDateTime().toLocalTime();
+                return localTime.isAfter(startTime) && localTime.isBefore(endTime);
+            }
+        });*/
         return null;
     }
 }
