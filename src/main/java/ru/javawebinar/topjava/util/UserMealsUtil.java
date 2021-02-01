@@ -9,6 +9,8 @@ import java.time.LocalTime;
 import java.time.Month;
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 public class UserMealsUtil {
     public static void main(String[] args) {
@@ -25,7 +27,7 @@ public class UserMealsUtil {
         List<UserMealWithExcess> mealsTo = filteredByCycles(meals, LocalTime.of(7, 0), LocalTime.of(12, 0), 2000);
         mealsTo.forEach(System.out::println);
 
-//        System.out.println(filteredByStreams(meals, LocalTime.of(7, 0), LocalTime.of(12, 0), 2000));
+        System.out.println(filteredByStreams(meals, LocalTime.of(7, 0), LocalTime.of(12, 0), 2000));
     }
 
     public static List<UserMealWithExcess> filteredByCycles(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
@@ -53,8 +55,6 @@ public class UserMealsUtil {
         }
 
         parseList(startTime, endTime, caloriesPerDay, result, list, countCalories);
-
-        // TODO return filtered list with excess. Implement by cycles
         return result;
     }
 
@@ -74,14 +74,15 @@ public class UserMealsUtil {
     }
 
     public static List<UserMealWithExcess> filteredByStreams(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
-        // TODO Implement by streams
-        /*meals.stream().filter(new Predicate<UserMeal>() {
-            @Override
-            public boolean test(UserMeal userMeal) {
-                LocalTime localTime = userMeal.getDateTime().toLocalTime();
-                return localTime.isAfter(startTime) && localTime.isBefore(endTime);
-            }
-        });*/
-        return null;
+        return meals.stream()
+                .collect(Collectors.groupingBy(a -> a.getDateTime().toLocalDate()))
+                .entrySet().stream().flatMap((x) -> {
+                    int countCaloriesPerDay = x.getValue().stream().mapToInt(UserMeal::getCalories).sum();
+                    return x.getValue().stream().map(y -> new UserMealWithExcess(y.getDateTime(), y.getDescription(),
+                            y.getCalories(), countCaloriesPerDay > caloriesPerDay));
+                }).filter((x) -> {
+                    LocalTime localTime = x.getDateTime().toLocalTime();
+                    return localTime.isAfter(startTime) && localTime.isBefore(endTime);
+                }).sorted((Comparator.comparing(UserMealWithExcess::getDateTime))).collect(Collectors.toList());
     }
 }
