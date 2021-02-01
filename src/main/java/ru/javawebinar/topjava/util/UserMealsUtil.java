@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -36,41 +37,35 @@ public class UserMealsUtil {
         copyMeal.sort(Comparator.comparing(UserMeal::getDateTime));
 
         List<UserMealWithExcess> result = new ArrayList<>();
-        List<UserMeal> list = new ArrayList<>();
         int countCalories = 0;
         LocalDate currentData = null;
+        AtomicBoolean atomicBoolean = new AtomicBoolean(true);
 
         for(UserMeal userMeal: copyMeal) {
             LocalDate localDate = userMeal.getDateTime().toLocalDate();
 
             if(!localDate.equals(currentData)){
-                parseList(startTime, endTime, caloriesPerDay, result, list, countCalories);
+                boolean bool = countCalories > caloriesPerDay;
+                atomicBoolean.set(bool);
+                atomicBoolean = new AtomicBoolean(true);
+
                 currentData = userMeal.getDateTime().toLocalDate();
                 countCalories = userMeal.getCalories();
-                list.clear();
             } else {
                 countCalories += userMeal.getCalories();
             }
-            list.add(userMeal);
-        }
 
-        parseList(startTime, endTime, caloriesPerDay, result, list, countCalories);
-        return result;
-    }
-
-    private static void parseList(LocalTime startTime, LocalTime endTime, int caloriesPerDay, List<UserMealWithExcess> result, List<UserMeal> list, int countCalories) {
-        for (UserMeal listEntityUserMeal: list){
-            LocalTime localTime = listEntityUserMeal.getDateTime().toLocalTime();
+            LocalTime localTime = userMeal.getDateTime().toLocalTime();
             if(localTime.isAfter(startTime) && localTime.isBefore(endTime)) {
-                boolean bool = countCalories > caloriesPerDay;
                 result.add(new UserMealWithExcess(
-                        listEntityUserMeal.getDateTime(),
-                        listEntityUserMeal.getDescription(),
-                        listEntityUserMeal.getCalories(),
-                        bool));
+                        userMeal.getDateTime(),
+                        userMeal.getDescription(),
+                        userMeal.getCalories(),
+                        atomicBoolean));
 
             }
         }
+        return result;
     }
 
     public static List<UserMealWithExcess> filteredByStreams(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
@@ -78,8 +73,9 @@ public class UserMealsUtil {
                 .collect(Collectors.groupingBy(a -> a.getDateTime().toLocalDate()))
                 .entrySet().stream().flatMap((x) -> {
                     int countCaloriesPerDay = x.getValue().stream().mapToInt(UserMeal::getCalories).sum();
+                    AtomicBoolean atomicBoolean = new AtomicBoolean(countCaloriesPerDay > caloriesPerDay);
                     return x.getValue().stream().map(y -> new UserMealWithExcess(y.getDateTime(), y.getDescription(),
-                            y.getCalories(), countCaloriesPerDay > caloriesPerDay));
+                            y.getCalories(), atomicBoolean));
                 }).filter((x) -> {
                     LocalTime localTime = x.getDateTime().toLocalTime();
                     return localTime.isAfter(startTime) && localTime.isBefore(endTime);
