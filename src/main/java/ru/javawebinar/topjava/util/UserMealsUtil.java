@@ -9,8 +9,6 @@ import java.time.LocalTime;
 import java.time.Month;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Predicate;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 public class UserMealsUtil {
@@ -32,31 +30,28 @@ public class UserMealsUtil {
     }
 
     public static List<UserMealWithExcess> filteredByCycles(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
-        List<UserMeal> copyMeal = new ArrayList<>(meals);
-
-        copyMeal.sort(Comparator.comparing(UserMeal::getDateTime));
 
         List<UserMealWithExcess> result = new ArrayList<>();
-        int countCalories = 0;
-        LocalDate currentData = null;
+        Map<LocalDate, Integer> countOfCaloriesMap = new HashMap<>();
+
         AtomicBoolean atomicBoolean = new AtomicBoolean(true);
 
-        for(UserMeal userMeal: copyMeal) {
+        for(UserMeal userMeal: meals) {
             LocalDate localDate = userMeal.getDateTime().toLocalDate();
 
-            if(!localDate.equals(currentData)){
-                boolean bool = countCalories > caloriesPerDay;
-                atomicBoolean.set(bool);
-                atomicBoolean = new AtomicBoolean(true);
+            Integer countOfCalories = countOfCaloriesMap.get(localDate);
 
-                currentData = userMeal.getDateTime().toLocalDate();
-                countCalories = userMeal.getCalories();
-            } else {
-                countCalories += userMeal.getCalories();
+            if(countOfCalories == null){
+                atomicBoolean = new AtomicBoolean(true);
+                countOfCalories = 0;
             }
 
+            int newCountOfCalories = countOfCalories + userMeal.getCalories();
+            countOfCaloriesMap.put(localDate, newCountOfCalories);
+            atomicBoolean.set(newCountOfCalories > caloriesPerDay);
+
             LocalTime localTime = userMeal.getDateTime().toLocalTime();
-            if(localTime.isAfter(startTime) && localTime.isBefore(endTime)) {
+            if(TimeUtil.isBetweenHalfOpen(localTime, startTime, endTime)) {
                 result.add(new UserMealWithExcess(
                         userMeal.getDateTime(),
                         userMeal.getDescription(),
@@ -70,15 +65,19 @@ public class UserMealsUtil {
 
     public static List<UserMealWithExcess> filteredByStreams(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
         return meals.stream()
-                .collect(Collectors.groupingBy(a -> a.getDateTime().toLocalDate()))
-                .entrySet().stream().flatMap((x) -> {
-                    int countCaloriesPerDay = x.getValue().stream().mapToInt(UserMeal::getCalories).sum();
+                .collect(Collectors.groupingBy(userMeal -> userMeal.getDateTime().toLocalDate()))
+                .entrySet().stream().flatMap(userMealMap -> {
+                    int countCaloriesPerDay = userMealMap.getValue().stream().mapToInt(UserMeal::getCalories).sum();
                     AtomicBoolean atomicBoolean = new AtomicBoolean(countCaloriesPerDay > caloriesPerDay);
-                    return x.getValue().stream().map(y -> new UserMealWithExcess(y.getDateTime(), y.getDescription(),
-                            y.getCalories(), atomicBoolean));
-                }).filter((x) -> {
-                    LocalTime localTime = x.getDateTime().toLocalTime();
-                    return localTime.isAfter(startTime) && localTime.isBefore(endTime);
-                }).sorted((Comparator.comparing(UserMealWithExcess::getDateTime))).collect(Collectors.toList());
+                    return userMealMap.getValue().stream().map(
+                            userMeal2 -> new UserMealWithExcess(
+                                    userMeal2.getDateTime(),
+                                    userMeal2.getDescription(),
+                                    userMeal2.getCalories(),
+                                    atomicBoolean));
+                }).filter(userMeal -> {
+                    LocalTime localTime = userMeal.getDateTime().toLocalTime();
+                    return TimeUtil.isBetweenHalfOpen(localTime, startTime, endTime);
+                }).collect(Collectors.toList());
     }
 }
