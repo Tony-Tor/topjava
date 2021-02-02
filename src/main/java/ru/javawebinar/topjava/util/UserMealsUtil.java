@@ -38,7 +38,6 @@ public class UserMealsUtil {
 
         for(UserMeal userMeal: meals) {
             LocalDate localDate = userMeal.getDateTime().toLocalDate();
-
             Integer countOfCalories = countOfCaloriesMap.get(localDate);
 
             if(countOfCalories == null){
@@ -64,20 +63,34 @@ public class UserMealsUtil {
     }
 
     public static List<UserMealWithExcess> filteredByStreams(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
-        return meals.stream()
-                .collect(Collectors.groupingBy(userMeal -> userMeal.getDateTime().toLocalDate()))
-                .entrySet().stream().flatMap(userMealMap -> {
-                    int countCaloriesPerDay = userMealMap.getValue().stream().mapToInt(UserMeal::getCalories).sum();
-                    AtomicBoolean atomicBoolean = new AtomicBoolean(countCaloriesPerDay > caloriesPerDay);
-                    return userMealMap.getValue().stream().map(
-                            userMeal2 -> new UserMealWithExcess(
-                                    userMeal2.getDateTime(),
-                                    userMeal2.getDescription(),
-                                    userMeal2.getCalories(),
-                                    atomicBoolean));
-                }).filter(userMeal -> {
-                    LocalTime localTime = userMeal.getDateTime().toLocalTime();
-                    return TimeUtil.isBetweenHalfOpen(localTime, startTime, endTime);
-                }).collect(Collectors.toList());
+        Map<LocalDate, Integer> countOfCaloriesMap = new HashMap<>();
+        Map<LocalDate, AtomicBoolean> atomicBooleanMap = new HashMap<>();
+
+        return meals.stream().map(
+                userMeal -> {
+                    LocalDate localDate = userMeal.getDateTime().toLocalDate();
+                    Integer countOfCalories = countOfCaloriesMap.get(localDate);
+
+                    if(countOfCalories == null){
+                        atomicBooleanMap.put(localDate, new AtomicBoolean(true));
+                        countOfCalories = 0;
+                    }
+
+                    int newCountOfCalories = countOfCalories + userMeal.getCalories();
+                    countOfCaloriesMap.put(localDate, newCountOfCalories);
+
+                    AtomicBoolean atomicBoolean = atomicBooleanMap.get(localDate);
+                    atomicBoolean.set(newCountOfCalories > caloriesPerDay);
+
+                    return new UserMealWithExcess(
+                            userMeal.getDateTime(),
+                            userMeal.getDescription(),
+                            userMeal.getCalories(),
+                            atomicBoolean);
+                }
+        ).filter(userMeal -> {
+            LocalTime localTime = userMeal.getDateTime().toLocalTime();
+            return TimeUtil.isBetweenHalfOpen(localTime, startTime, endTime);
+        }).collect(Collectors.toList());
     }
 }
