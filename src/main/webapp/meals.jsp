@@ -7,7 +7,7 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix = "fmt" uri = "http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <html lang="ru">
 <head>
     <title>Meals</title>
@@ -16,7 +16,6 @@
 <h3><a href="index.html">Home</a></h3>
 <hr>
 <h2>Meals</h2>
-<td><a href="meals?action=add">Add meal</a></td>
 <table>
     <thead>
     <tr>
@@ -41,7 +40,5 @@
     </c:forEach>
     </tbody>
 </table>
-<%--
-<p><a href="UserController?action=insert">Add User</a></p>--%>
 </body>
 </html>
