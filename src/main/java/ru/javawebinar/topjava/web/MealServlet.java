@@ -2,7 +2,7 @@ package ru.javawebinar.topjava.web;
 
 import org.slf4j.Logger;
 import ru.javawebinar.topjava.dao.IMealDao;
-import ru.javawebinar.topjava.dao.MealDao;
+import ru.javawebinar.topjava.mockdb.MealDao;
 import ru.javawebinar.topjava.model.Meal;
 import ru.javawebinar.topjava.model.MealTo;
 import ru.javawebinar.topjava.util.MealsUtil;
@@ -25,9 +25,12 @@ public class MealServlet extends HttpServlet {
     private static final Logger log = getLogger(MealServlet.class);
     private static final String LIST_MEALS = "/meals.jsp";
     private static final String EDIT_MEALS = "/editmeals.jsp";
-    private final IMealDao mealDao;
+    private IMealDao mealDao;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
-    public MealServlet() {
+    @Override
+    public void init() throws ServletException {
         mealDao = new MealDao();
     }
 
@@ -35,36 +38,35 @@ public class MealServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         log.debug("redirect to meals");
 
-        String forward="";
+        String forward;
         String action = request.getParameter("action");
 
-        if(action == null) {
+        if (action == null) {
             request.setAttribute("meals", getMealsTo());
             forward = LIST_MEALS;
         } else {
             switch (action.toLowerCase()) {
-                case "delete":
-                    {
-                        int id = Integer.parseInt(request.getParameter("id"));
-                        mealDao.deleteMeal(id);
-                        request.setAttribute("meals", getMealsTo());
-                        forward = LIST_MEALS;
-                    }
-                    break;
-                case "edit":
-                    {
-                        int id = Integer.parseInt(request.getParameter("id"));
-                        Meal meal = mealDao.getMealById(id);
-                        request.setAttribute("meal", meal);
-                        forward = EDIT_MEALS;
-                    }
-                    break;
-
-                case "add":
-                {
+                case "delete": {
+                    int id = Integer.parseInt(request.getParameter("id"));
+                    mealDao.delete(id);
+                    response.sendRedirect("meals");
+                    return;
+                }
+                case "edit": {
+                    int id = Integer.parseInt(request.getParameter("id"));
+                    Meal meal = mealDao.getById(id);
+                    request.setAttribute("meal", meal);
                     forward = EDIT_MEALS;
                 }
                 break;
+
+                case "add": {
+                    forward = EDIT_MEALS;
+                }
+                break;
+                default:
+                    response.sendRedirect("meals");
+                    return;
             }
         }
 
@@ -75,35 +77,31 @@ public class MealServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         log.debug("redirect to editmeals");
+        req.setCharacterEncoding("UTF-8");
+
         String date = req.getParameter("date");
         String time = req.getParameter("time");
         String description = req.getParameter("description");
         String caloriesString = req.getParameter("calories");
         String idString = req.getParameter("id");
 
-        log.debug(description);
-
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-
-        LocalDateTime dateTime = LocalDateTime.of(LocalDate.parse(date, dateFormatter), LocalTime.parse(time, timeFormatter));
+        LocalDateTime dateTime = LocalDateTime.of(LocalDate.parse(date, DATE_FORMATTER), LocalTime.parse(time, TIME_FORMATTER));
         int calories = Integer.parseInt(caloriesString);
 
+
         if (idString.equals("")) {
-            mealDao.addMeal(new Meal(dateTime, description, calories));
+            mealDao.add(new Meal(0, dateTime, description, calories));
         } else {
             int id = Integer.parseInt(idString);
-            mealDao.updateMeal(id, new Meal(dateTime, description, calories));
+            mealDao.update(new Meal(id, dateTime, description, calories));
         }
 
-        req.setAttribute("meals", getMealsTo());
-        RequestDispatcher view = req.getRequestDispatcher(LIST_MEALS);
-        view.forward(req, resp);
+        resp.sendRedirect("meals");
     }
 
-    private List<MealTo> getMealsTo(){
+    private List<MealTo> getMealsTo() {
         return MealsUtil.filteredByStreams(
-                mealDao.getAllMeals(),
+                mealDao.getAll(),
                 LocalTime.MIN,
                 LocalTime.MAX,
                 MealsUtil.CALORIES_PER_DAY);
