@@ -10,20 +10,21 @@
 <%@ taglib prefix = "fmt" uri = "http://java.sun.com/jsp/jstl/fmt" %>
 <html lang="ru">
 <head>
-    <title>Users</title>
+    <title>Meals</title>
 </head>
 <body>
 <h3><a href="index.html">Home</a></h3>
 <hr>
 <h2>Meals</h2>
+<td><a href="meals?action=add">Add meal</a></td>
 <table>
     <thead>
     <tr>
         <th>Date</th>
         <th>Description</th>
         <th>Calories</th>
-        <%--<th>Delite</th>
-        <th>Upudate</th>--%>
+        <th>Delete</th>
+        <th>Update</th>
     </tr>
     </thead>
     <tbody>
@@ -34,9 +35,8 @@
                 <fmt:formatDate pattern="dd-MM-yyyy HH:mm" value="${parsedDateTime}"/></td>
             <td>${meal.description}</td>
             <td>${meal.calories}</td>
-                <%-- <td><a href="UserController?action=edit&userId=<c:out value="${user.userid}"/>">Update</a></td>
-                 <td><a href="UserController?action=delete&userId=<c:out value="${user.userid}"/>">Delete</a></td>
-                 --%>
+            <td><a href="meals?action=edit&id=<c:out value="${meal.id}"/>">Update</a></td>
+            <td><a href="meals?action=delete&id=<c:out value="${meal.id}"/>">Delete</a></td>
         </tr>
     </c:forEach>
     </tbody>
