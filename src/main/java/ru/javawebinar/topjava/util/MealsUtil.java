@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 
 public class MealsUtil {
 
-
     public final static int CALORIES_PER_DAY = 2000;
 
     public static List<MealTo> filteredByStreams(List<Meal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
