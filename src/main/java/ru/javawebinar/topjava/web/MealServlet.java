@@ -52,8 +52,9 @@ public class MealServlet extends HttpServlet {
             switch (action.toLowerCase()) {
                 case "delete": {
                     int id = Integer.parseInt(request.getParameter("id"));
+                    log.debug("DELETE: id = " + id);
                     mealDao.delete(id);
-                    log.debug("redirect to meals");
+                    log.debug("redirect to meals: after deleted meals with id = " + id);
                     response.sendRedirect("meals");
                     return;
                 }
@@ -71,7 +72,7 @@ public class MealServlet extends HttpServlet {
                 }
                 break;
                 default:
-                    log.debug("redirect to meals");
+                    log.debug("redirect to meals: no action or unknown action");
                     response.sendRedirect("meals");
                     return;
             }
@@ -96,10 +97,26 @@ public class MealServlet extends HttpServlet {
         int calories = Integer.parseInt(req.getParameter("calories"));
 
         if (idString.equals("")) {
-            mealDao.add(new Meal(0, dateTime, description, calories));
+            Meal added = mealDao.add(new Meal(0, dateTime, description, calories));
+            log.debug(String.format(
+                    "ADD: id = %s, dataTime = %s, description = %s, calories = %s",
+                    added.getId(),
+                    added.getDateTime(),
+                    added.getDescription(),
+                    added.getCalories()));
         } else {
             int id = Integer.parseInt(idString);
-            mealDao.update(new Meal(id, dateTime, description, calories));
+            Meal updated = mealDao.update(new Meal(id, dateTime, description, calories));
+            if(updated != null) {
+                log.debug(String.format(
+                        "UPDATE: meal with id = %s to dataTime = %s, description = %s, calories = %s",
+                        updated.getId(),
+                        updated.getDateTime(),
+                        updated.getDescription(),
+                        updated.getCalories()));
+            } else {
+                log.debug("UPDATE: unknown meal with id = " + id);
+            }
         }
 
         log.debug("redirect to meals");

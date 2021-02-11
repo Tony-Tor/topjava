@@ -28,6 +28,9 @@ public class MealDao implements IMealDao {
 
     @Override
     public Meal update(Meal meal) {
+        if(!meals.containsKey(meal.getId())){
+            return null;
+        }
         meals.put(meal.getId(), meal);
         return meal;
     }
