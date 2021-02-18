@@ -1,6 +1,8 @@
 package ru.javawebinar.topjava.to;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 public class MealTo {
     private final Integer id;
@@ -31,6 +33,14 @@ public class MealTo {
 
     public String getDescription() {
         return description;
+    }
+
+    public LocalDate getDate() {
+        return dateTime.toLocalDate();
+    }
+
+    public LocalTime getTime() {
+        return dateTime.toLocalTime();
     }
 
     public int getCalories() {

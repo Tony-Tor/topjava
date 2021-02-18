@@ -8,7 +8,10 @@ import ru.javawebinar.topjava.model.Meal;
 import ru.javawebinar.topjava.service.MealService;
 import ru.javawebinar.topjava.to.MealTo;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static ru.javawebinar.topjava.util.ValidationUtil.assureIdConsistent;
 import static ru.javawebinar.topjava.util.ValidationUtil.checkNew;
@@ -21,7 +24,7 @@ public class MealRestController {
     private MealService service;
 
     public List<MealTo> getAll() {
-        log.info("getAll" );
+        log.info("getAll");
         return service.getAll();
     }
 
@@ -45,6 +48,20 @@ public class MealRestController {
         log.info("update {} with id={}", meal, id);
         assureIdConsistent(meal, id);
         service.update(meal);
+    }
+
+    public List<MealTo> getFiltered(LocalDate startDate, LocalDate endDate, LocalTime startTime, LocalTime endTime) {
+        log.info("getFiltered");
+        return service.getAll().stream()
+                .filter(mealTo -> {
+                    boolean filter = true;
+                    if (startDate != null) filter &= mealTo.getDate().isAfter(startDate);
+                    if (endDate != null) filter &= mealTo.getDate().isBefore(endDate);
+                    if (startTime != null) filter &= mealTo.getTime().isAfter(startTime);
+                    if (endTime != null) filter &= mealTo.getTime().isBefore(endTime);
+                    return filter;
+                })
+                .collect(Collectors.toList());
     }
 
 }

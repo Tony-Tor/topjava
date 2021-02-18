@@ -21,6 +21,27 @@
     <h3><a href="index.html">Home</a></h3>
     <hr/>
     <h2>Meals</h2>
+
+    <form method="get" action="meals">
+        <dl>
+            <dt>Start Date:</dt>
+            <dd><input type="date-local" name="startDate" required></dd>
+        </dl>
+        <dl>
+            <dt>End Data:</dt>
+            <dd><input type="date-local" name="endDate" required></dd>
+        </dl>
+        <dl>
+            <dt>Start Time:</dt>
+            <dd><input type="time-local" name="startTime" required></dd>
+        </dl>
+        <dl>
+            <dt>End Time:</dt>
+            <dd><input type="time-local" name="endTime" required></dd>
+        </dl>
+        <button type="submit">Filter</button>
+    </form>
+
     <a href="meals?action=create">Add Meal</a>
     <br><br>
     <table border="1" cellpadding="8" cellspacing="0">
