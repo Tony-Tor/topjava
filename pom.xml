@@ -24,6 +24,7 @@
         <postgresql.version>42.2.18</postgresql.version>
         <!--    Tests  -->
         <junit.version>4.13.2</junit.version>
+        <assertj.version>3.19.0</assertj.version>
     </properties>
 
     <build>
