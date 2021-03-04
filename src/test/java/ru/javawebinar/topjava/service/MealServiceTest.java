@@ -1,7 +1,13 @@
 package ru.javawebinar.topjava.service;
 
-import org.junit.Test;
+import org.junit.*;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.TestName;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.test.context.ContextConfiguration;
@@ -10,9 +16,11 @@ import org.springframework.test.context.jdbc.SqlConfig;
 import org.springframework.test.context.junit4.SpringRunner;
 import ru.javawebinar.topjava.model.Meal;
 import ru.javawebinar.topjava.util.exception.NotFoundException;
+import ru.javawebinar.topjava.web.meal.MealRestController;
 
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.Date;
 
 import static org.junit.Assert.assertThrows;
 import static ru.javawebinar.topjava.MealTestData.*;
@@ -27,8 +35,28 @@ import static ru.javawebinar.topjava.UserTestData.USER_ID;
 @Sql(scripts = "classpath:db/populateDB.sql", config = @SqlConfig(encoding = "UTF-8"))
 public class MealServiceTest {
 
+    private static final Logger log = LoggerFactory.getLogger(MealRestController.class);
+
     @Autowired
     private MealService service;
+
+    @Rule
+    public TestName witcher = new TestName() {
+
+        long strtTime;
+
+        @Override
+        protected void starting(Description d) {
+            log.info(String.format("Start tests class = %s and method = %s", d.getClassName(), d.getMethodName()));
+            strtTime = new Date().getTime();
+        }
+
+        @Override
+        protected void finished(Description d) {
+            long endTime = new Date().getTime() - strtTime;
+            log.info(String.format("End tests class = %s and method = %s, duration of execution = %dms", d.getClassName(), d.getMethodName(), endTime));
+        }
+    };
 
     @Test
     public void delete() {
