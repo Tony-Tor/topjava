@@ -96,5 +96,6 @@
     <beans profile="jpa">
     </beans>
     <beans profile="datajpa">
+
     </beans>
 </beans>
