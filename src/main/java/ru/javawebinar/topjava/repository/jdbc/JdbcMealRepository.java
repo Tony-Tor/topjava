@@ -1,5 +1,6 @@
 package ru.javawebinar.topjava.repository.jdbc;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
@@ -9,8 +10,13 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 import ru.javawebinar.topjava.Profiles;
 import ru.javawebinar.topjava.model.Meal;
+import ru.javawebinar.topjava.model.User;
 import ru.javawebinar.topjava.repository.MealRepository;
 
 import java.sql.Timestamp;
@@ -27,13 +33,17 @@ public abstract class JdbcMealRepository<T> implements MealRepository {
 
     private final SimpleJdbcInsert insertMeal;
 
-    JdbcMealRepository(JdbcTemplate jdbcTemplate, NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    private final TransactionTemplate transactionTemplate;
+
+    JdbcMealRepository(JdbcTemplate jdbcTemplate, NamedParameterJdbcTemplate namedParameterJdbcTemplate, PlatformTransactionManager transactionManager) {
         this.insertMeal = new SimpleJdbcInsert(jdbcTemplate)
                 .withTableName("meals")
                 .usingGeneratedKeyColumns("id");
 
         this.jdbcTemplate = jdbcTemplate;
         this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+
+        transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     protected abstract T toDbDateTime(LocalDateTime ldt);
@@ -41,8 +51,8 @@ public abstract class JdbcMealRepository<T> implements MealRepository {
     @Repository
     @Profile(Profiles.POSTGRES_DB)
     public static class Java8JdbcMealRepository extends JdbcMealRepository<LocalDateTime> {
-        public Java8JdbcMealRepository(JdbcTemplate jdbcTemplate, NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-            super(jdbcTemplate, namedParameterJdbcTemplate);
+        public Java8JdbcMealRepository(JdbcTemplate jdbcTemplate, NamedParameterJdbcTemplate namedParameterJdbcTemplate, PlatformTransactionManager transactionManager) {
+            super(jdbcTemplate, namedParameterJdbcTemplate, transactionManager);
         }
 
         @Override
@@ -54,8 +64,8 @@ public abstract class JdbcMealRepository<T> implements MealRepository {
     @Repository
     @Profile(Profiles.HSQL_DB)
     public static class TimestampJdbcMealRepository extends JdbcMealRepository<Timestamp> {
-        public TimestampJdbcMealRepository(JdbcTemplate jdbcTemplate, NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-            super(jdbcTemplate, namedParameterJdbcTemplate);
+        public TimestampJdbcMealRepository(JdbcTemplate jdbcTemplate, NamedParameterJdbcTemplate namedParameterJdbcTemplate, PlatformTransactionManager transactionManager) {
+            super(jdbcTemplate, namedParameterJdbcTemplate, transactionManager);
         }
 
         @Override
@@ -66,25 +76,31 @@ public abstract class JdbcMealRepository<T> implements MealRepository {
 
     @Override
     public Meal save(Meal meal, int userId) {
-        MapSqlParameterSource map = new MapSqlParameterSource()
-                .addValue("id", meal.getId())
-                .addValue("description", meal.getDescription())
-                .addValue("calories", meal.getCalories())
-                .addValue("date_time", toDbDateTime(meal.getDateTime()))
-                .addValue("user_id", userId);
+        return transactionTemplate.execute(new TransactionCallback<Meal>() {
 
-        if (meal.isNew()) {
-            Number newId = insertMeal.executeAndReturnKey(map);
-            meal.setId(newId.intValue());
-        } else {
-            if (namedParameterJdbcTemplate.update("" +
-                    "UPDATE meals " +
-                    "   SET description=:description, calories=:calories, date_time=:date_time " +
-                    " WHERE id=:id AND user_id=:user_id", map) == 0) {
-                return null;
+            @Override
+            public Meal doInTransaction(TransactionStatus status) {
+                MapSqlParameterSource map = new MapSqlParameterSource()
+                        .addValue("id", meal.getId())
+                        .addValue("description", meal.getDescription())
+                        .addValue("calories", meal.getCalories())
+                        .addValue("date_time", toDbDateTime(meal.getDateTime()))
+                        .addValue("user_id", userId);
+
+                if (meal.isNew()) {
+                    Number newId = insertMeal.executeAndReturnKey(map);
+                    meal.setId(newId.intValue());
+                } else {
+                    if (namedParameterJdbcTemplate.update("" +
+                            "UPDATE meals " +
+                            "   SET description=:description, calories=:calories, date_time=:date_time " +
+                            " WHERE id=:id AND user_id=:user_id", map) == 0) {
+                        return null;
+                    }
+                }
+                return meal;
             }
-        }
-        return meal;
+        });
     }
 
     @Override

@@ -1,6 +1,8 @@
 package ru.javawebinar.topjava.repository.jpa;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import ru.javawebinar.topjava.model.Meal;
 import ru.javawebinar.topjava.model.User;
@@ -17,6 +19,7 @@ public class JpaMealRepository implements MealRepository {
 
     @PersistenceContext
     private EntityManager em;
+
 
     @Override
     @Transactional
